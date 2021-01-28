@@ -7,14 +7,14 @@ import xlrd
 
 #@st.cache
 def load_data():
-    df = pd.read_excel(r'C:\Users\Paulo\OneDrive\Arquivos\VisualCode\Streamlit\OdontoMap\Arquivo_split.xlsx')
+    df = pd.read_excel('Arquivo_split.xlsx')
     df['latitude']=pd.to_numeric(df['latitude'])
     df['longitude']=pd.to_numeric(df['longitude']) 
     df.dropna(inplace=True, axis=0)
     return df
 
 def load_data2():
-    df2 = pd.read_csv(r'C:\Users\Paulo\OneDrive\Arquivos\VisualCode\Streamlit\OdontoMap\estamos.csv')
+    df2 = pd.read_csv('estamos.csv')
     df2 = df2[df2['Nome'] == 'Estamos']
 
     return df2
