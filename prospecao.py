@@ -19,15 +19,13 @@ def load_data2():
 
     return df2
 
-
 df = load_data()
 df2 = load_data2()
-
 
 df['Legenda'] = "Odontologia"
 df2['Legenda'] = "Estamos"
 
-combined = pd.concat([df[['Nome', 'latitude', 'longitude', 'uf','municipio','Legenda', 'Telefone']], df2], ignore_index=True, sort=False, axis=0)
+combined = pd.concat([df[['Nome', 'latitude', 'longitude', 'uf','municipio','Legenda', 'Telefone']], df2], ignore_index=False, axis=0)
 
 
 # SIDEBAR
@@ -44,22 +42,23 @@ tabela = st.sidebar.empty()    # placeholder que só vai ser carregado com o df_
 label_to_filter = st.sidebar.multiselect(
     label= "Escolha a UF desejada",
     options= combined['uf'].unique().tolist(),
-    default= combined.uf.unique()
+    default= combined.uf.unique().tolist()
 )
 
 # Somente aqui os dados filtrados são atualizados em novo dataframe
 filtered_df = combined[(combined.uf.isin(label_to_filter))]
 
-
 # Multiselect com os lables únicos dos tipos de classificação
 label_to_filter2 = st.sidebar.multiselect(
     label="Escolha o Municipio desejado",
     options=filtered_df['municipio'].unique().tolist(),
-    default= filtered_df['municipio'].unique()
+    default= filtered_df['municipio'].unique().tolist()
 )
 
+filtered_df2 = filtered_df[(filtered_df.uf.isin(label_to_filter))& (filtered_df.municipio.isin(label_to_filter2))]
+
 #filtrando dataset pelo filtro municipio
-filtered_df2 = filtered_df[(filtered_df.municipio.isin(label_to_filter2))]
+#filtered_df2 = filtered_df[(filtered_df.municipio.isin(label_to_filter2))]
 
 # Informação no rodapé da Sidebar
 st.sidebar.markdown("""
@@ -82,16 +81,25 @@ if tabela.checkbox("Mostrar tabela de dados"):
 
 
 # mapa
-st.subheader("Mapa de ocorrências")
+try:
+    fig2 = px.scatter_mapbox(filtered_df2, lat="latitude", lon="longitude", 
+                            hover_name="Telefone",
+                            hover_data= ["Nome"],
+                            color='Legenda',
+                            #labels=['Telefone'],
+                            color_discrete_sequence=px.colors.qualitative.G10,
+                            zoom=3, height=500, width=800)              
+    fig2.update_layout(mapbox_style="carto-positron")
+    fig2.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    fig2.update_layout(legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="left",
+        x=0.01
+    ))
 
-fig2 = px.scatter_mapbox(filtered_df2, lat="latitude", lon="longitude", 
-                        hover_name=filtered_df2["Telefone"], 
-                        #hover_data=filtered_df2["Nome"],
-                        color=filtered_df2['Legenda'],
-                        #labels=['Telefone'],
-                        color_discrete_sequence=px.colors.qualitative.G10,
-                        zoom=3, height=600, width=950)              
-fig2.update_layout(mapbox_style="carto-positron")
-fig2.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
-   
-st.write(fig2)
+    #fig2.write_html('MAPA.html')
+    st.write(fig2)
+except:
+    pass
