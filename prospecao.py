@@ -3,7 +3,8 @@ import streamlit as st
 import numpy as np
 import plotly.express as px
 import xlrd
-
+import unidecode
+ 
 
 #@st.cache
 def load_data():
@@ -26,7 +27,17 @@ df['Legenda'] = "Odontologia"
 df2['Legenda'] = "Estamos"
 
 combined = pd.concat([df[['Nome', 'latitude', 'longitude', 'uf','municipio','Legenda', 'Telefone']], df2], ignore_index=False, axis=0)
+#Removendo acentos:
+combined['municipio'] = combined['municipio'].apply(unidecode.unidecode)
+#Maiusculo no nome:
+combined['municipio'] = combined.municipio.str.strip().str.upper()
+#Removendo acentos:
+combined['uf'] = combined['uf'].apply(unidecode.unidecode)
+#Maiusculo no nome:
+combined['uf'] = combined['uf'].str.strip().str.upper()
 
+combined = combined.sort_values('municipio')
+combined['Telefone'] = combined['Telefone'].fillna("")
 
 # SIDEBAR
 # Parâmetros e número de ocorrências
@@ -38,27 +49,22 @@ info_sidebar = st.sidebar.empty()    # placeholder, para informações filtradas
 st.sidebar.subheader("Tabela")
 tabela = st.sidebar.empty()    # placeholder que só vai ser carregado com o df_filtered
 
-# Multiselect com os lables únicos dos tipos de classificação
-label_to_filter = st.sidebar.multiselect(
-    label= "Escolha a UF desejada",
-    options= combined['uf'].unique().tolist(),
-    default= combined.uf.unique().tolist()
-)
+#Filtros de UF:
+list_uf = list(combined['uf'].unique())
+label_to_filter = st.sidebar.multiselect('Escolha UF desejada:',list_uf,default=None)
+if (len(label_to_filter) != 0):
+    combined = combined[(combined.uf.isin(label_to_filter))]
+elif (len(label_to_filter) == 0):
+    combined = combined[(combined.uf.isin(list_uf))]
 
-# Somente aqui os dados filtrados são atualizados em novo dataframe
-filtered_df = combined[(combined.uf.isin(label_to_filter))]
 
-# Multiselect com os lables únicos dos tipos de classificação
-label_to_filter2 = st.sidebar.multiselect(
-    label="Escolha o Municipio desejado",
-    options=filtered_df['municipio'].unique().tolist(),
-    default= filtered_df['municipio'].unique().tolist()
-)
-
-filtered_df2 = filtered_df[(filtered_df.uf.isin(label_to_filter))& (filtered_df.municipio.isin(label_to_filter2))]
-
-#filtrando dataset pelo filtro municipio
-#filtered_df2 = filtered_df[(filtered_df.municipio.isin(label_to_filter2))]
+#Filtros Municipio:
+list_mun = list(combined['municipio'].unique())
+label_to_filter2 = st.sidebar.multiselect('Escolha Município desejada:',list_mun,default=None)
+if (len(label_to_filter2) != 0):
+    combined = combined[(combined.municipio.isin(label_to_filter2))]
+elif (len(label_to_filter2) == 0):
+    combined = combined[(combined.municipio.isin(list_mun))]
 
 # Informação no rodapé da Sidebar
 st.sidebar.markdown("""
@@ -66,40 +72,39 @@ Base de dados com região e telefone de ***Dentistas***.
 """)
 
 # Aqui o placehoder vazio finalmente é atualizado com dados do filtered_df
-info_sidebar.info("{} ocorrências selecionadas.".format(filtered_df2.shape[0]))
+info_sidebar.info("{} ocorrências selecionadas.".format(combined.shape[0]))
 
 
 # MAIN
-st.title("Rede de Dentistas")
+st.title("SEGMENTO ODONTOLÓGICO")
 st.markdown(f"""
             ℹ️ Estão sendo exibidas as ocorrências classificadas como **{", ".join(label_to_filter)}**
             """)
 
 # raw data (tabela) dependente do checkbox
 if tabela.checkbox("Mostrar tabela de dados"):
-    st.write(filtered_df2[['Nome','Telefone','municipio','uf']])
+    st.write(combined[['Nome','Telefone','municipio','uf']])
 
 
 # mapa
-try:
-    fig2 = px.scatter_mapbox(filtered_df2, lat="latitude", lon="longitude", 
-                            hover_name="Telefone",
-                            hover_data= ["Nome"],
-                            color='Legenda',
-                            #labels=['Telefone'],
-                            color_discrete_sequence=px.colors.qualitative.G10,
-                            zoom=3, height=500, width=800)              
-    fig2.update_layout(mapbox_style="carto-positron")
-    fig2.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
-    fig2.update_layout(legend=dict(
-        orientation="h",
-        yanchor="bottom",
-        y=1.02,
-        xanchor="left",
-        x=0.01
-    ))
+#try:
+fig2 = px.scatter_mapbox(combined, lat="latitude", lon="longitude", 
+                        hover_name="Telefone",
+                        hover_data= ["Nome"],
+                        color='Legenda',
+                        #labels=['Telefone'],
+                        color_discrete_sequence=px.colors.qualitative.G10,
+                        zoom=3, height=500, width=800)              
+fig2.update_layout(mapbox_style="carto-positron")
+fig2.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+fig2.update_layout(legend=dict(
+    orientation="h",
+    yanchor="bottom",
+    y=1.02,
+    xanchor="left",
+    x=0.01
+))
 
-    #fig2.write_html('MAPA.html')
-    st.write(fig2)
-except:
-    pass
+#fig2.write_html('MAPA.html')
+st.write(fig2)
+
